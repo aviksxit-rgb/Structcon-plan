@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Structcon Master Plan</title>
+
+<!-- Microsoft Authentication Library (MSAL) -->
+<script src="https://alcdn.msauth.net/browser/3.10.0/js/msal-browser.min.js"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #eef1f6;
+    color: #1f2937;
+    line-height: 1.4;
+    min-height: 100vh;
+    font-size: 13px;
+  }
+
+  /* Header */
+  header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #0f4c75 100%);
+    color: white;
+    padding: 10px 22px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-logo {
+    width: 32px; height: 32px; background: #f59e0b; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 15px; color: #1e3a5f;
+  }
+  .brand h1 { font-size: 16px; font-weight: 700; }
+  .brand .subtitle { font-size: 10px; opacity: 0.85; }
+  .user-info { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .user-info .email { opacity: 0.85; font-size: 10px; }
+
+  .sync-status {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; padding: 3px 8px; border-radius: 10px;
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+    cursor: pointer;
+  }
+  .sync-status.synced { background: rgba(34,197,94,0.25); }
+  .sync-status.syncing { background: rgba(251,191,36,0.3); }
+  .sync-status.offline { background: rgba(239,68,68,0.3); }
+  .sync-status.local { background: rgba(107,114,128,0.4); }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: white; }
+  .sync-status.synced .sync-dot { background: #22c55e; }
+  .sync-status.syncing .sync-dot { background: #fbbf24; animation: pulse 1s infinite; }
+  .sync-status.offline .sync-dot { background: #ef4444; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .week-nav { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .week-nav button {
+    background: rgba(255,255,255,0.15); color: white;
+    border: 1px solid rgba(255,255,255,0.25);
+    padding: 5px 11px; border-radius: 5px; cursor: pointer;
+    font-size: 11px; font-weight: 500;
+  }
+  .week-nav button:hover { background: rgba(255,255,255,0.25); }
+  .week-display { font-size: 13px; font-weight: 600; padding: 0 8px; }
+  .week-stats { margin-left: auto; font-size: 11px; display: flex; gap: 8px; }
+  .stat-badge { background: rgba(255,255,255,0.15); padding: 3px 9px; border-radius: 10px; }
+  .stat-badge strong { font-weight: 700; }
+  .stat-badge.alert { background: rgba(239,68,68,0.35); }
+
+  /* Toolbar */
+  .toolbar {
+    background: white; padding: 8px 22px;
+    display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+    border-bottom: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .btn {
+    padding: 5px 11px; border-radius: 5px;
+    font-size: 11px; font-weight: 500;
+    border: 1px solid transparent; cursor: pointer; transition: all 0.12s;
+    display: inline-flex; align-items: center; gap: 4px; font-family: inherit;
+  }
+  .btn-primary { background: #1e3a5f; color: white; }
+  .btn-primary:hover { background: #0f4c75; }
+  .btn-secondary { background: white; color: #1e3a5f; border-color: #cbd5e1; }
+  .btn-secondary:hover { background: #f1f5f9; }
+  .btn-ai { background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); color: white; }
+  .btn-ai:hover { opacity: 0.92; }
+  .btn-danger { background: white; color: #dc2626; border-color: #fecaca; }
+  .btn-danger:hover { background: #fef2f2; }
+  .btn-xs { padding: 3px 7px; font-size: 10px; }
+  .btn-microsoft {
+    background: white; color: #1e3a5f;
+    border: 1px solid #d1d5db;
+    padding: 10px 16px; font-size: 13px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 8px;
+    width: 100%; justify-content: center; border-radius: 6px; cursor: pointer; font-family: inherit;
+  }
+  .btn-microsoft:hover { background: #f8fafc; }
+  .ms-logo { width: 20px; height: 20px; }
+
+  /* Main grid */
+  main { padding: 14px 18px 30px; }
+  #projects-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 10px; align-items: start;
+  }
+
+  /* Tile */
+  .tile {
+    background: white; border-radius: 7px;
+    border: 1px solid #d1d5db; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    display: flex; flex-direction: column; overflow: hidden;
+    font-size: 11.5px; min-height: 110px;
+  }
+  .tile.category { border-top: 3px solid #f59e0b; }
+  .tile.project { border-top: 3px solid #1e3a5f; }
+  .tile-header {
+    padding: 6px 9px; background: #f8fafc; border-bottom: 1px solid #e5e7eb;
+    display: flex; justify-content: space-between; align-items: center; gap: 4px;
+  }
+  .tile-title {
+    font-weight: 700; font-size: 12px; color: #1e3a5f; line-height: 1.25;
+    overflow: hidden; text-overflow: ellipsis; word-break: break-word; flex: 1;
+  }
+  .tile.category .tile-title { color: #92400e; }
+  .tile-menu { position: relative; flex-shrink: 0; }
+  .tile-menu-btn {
+    background: transparent; border: none; color: #6b7280;
+    cursor: pointer; font-size: 14px; padding: 0 3px; line-height: 1;
+  }
+  .tile-menu-btn:hover { color: #1e3a5f; }
+  .tile-menu-dropdown {
+    display: none; position: absolute; right: 0; top: 100%;
+    background: white; border: 1px solid #d1d5db; border-radius: 5px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    z-index: 50; min-width: 130px; overflow: hidden;
+  }
+  .tile-menu-dropdown.open { display: block; }
+  .tile-menu-dropdown button {
+    display: block; width: 100%; text-align: left;
+    background: white; border: none;
+    padding: 6px 10px; font-size: 11px; cursor: pointer; color: #374151; font-family: inherit;
+  }
+  .tile-menu-dropdown button:hover { background: #f3f4f6; }
+  .tile-menu-dropdown button.danger { color: #dc2626; }
+
+  .tile-body { padding: 5px 9px 7px; flex: 1; }
+  .task-line {
+    display: flex; align-items: flex-start; gap: 5px; padding: 3px 0;
+    border-bottom: 1px dotted #e5e7eb; font-size: 11px; line-height: 1.35;
+  }
+  .task-line:last-child { border-bottom: none; }
+  .task-line input[type="checkbox"] {
+    width: 12px; height: 12px; margin-top: 2px;
+    cursor: pointer; accent-color: #1e3a5f; flex-shrink: 0;
+  }
+  .task-text { flex: 1; word-break: break-word; }
+  .task-line.done .task-text { text-decoration: line-through; color: #9ca3af; }
+  .task-line.priority-high { border-left: 2px solid #dc2626; padding-left: 4px; margin-left: -4px; }
+  .task-line.priority-medium { border-left: 2px solid #f59e0b; padding-left: 4px; margin-left: -4px; }
+  .task-line.priority-low { border-left: 2px solid #9ca3af; padding-left: 4px; margin-left: -4px; }
+  .due-mini {
+    font-size: 9.5px; color: #6b7280; background: #f1f5f9;
+    padding: 1px 4px; border-radius: 3px; white-space: nowrap; flex-shrink: 0;
+  }
+  .due-mini.overdue { background: #fee2e2; color: #dc2626; font-weight: 600; }
+  .due-mini.today { background: #fef3c7; color: #d97706; font-weight: 600; }
+  .task-del {
+    background: transparent; border: none; color: #cbd5e1;
+    cursor: pointer; font-size: 12px; padding: 0 2px;
+    line-height: 1; visibility: hidden;
+  }
+  .task-line:hover .task-del { visibility: visible; }
+  .task-del:hover { color: #dc2626; }
+
+  .add-task-row {
+    display: flex; gap: 3px; margin-top: 5px; padding-top: 5px; border-top: 1px solid #e5e7eb;
+  }
+  .add-task-row input[type="text"] {
+    flex: 1; min-width: 0; padding: 3px 6px;
+    border: 1px solid #d1d5db; border-radius: 4px;
+    font-size: 11px; font-family: inherit;
+  }
+  .add-task-row .add-btn {
+    background: #1e3a5f; color: white; border: none; border-radius: 4px;
+    padding: 3px 7px; cursor: pointer; font-size: 11px; font-weight: 600; flex-shrink: 0;
+  }
+  .quick-options { display: none; gap: 3px; margin-top: 3px; }
+  .quick-options.show { display: flex; }
+  .quick-options select, .quick-options input[type="date"] {
+    flex: 1; min-width: 0; padding: 2px 4px;
+    border: 1px solid #d1d5db; border-radius: 3px;
+    font-size: 10px; font-family: inherit;
+  }
+
+  .tile-footer {
+    border-top: 1px solid #e5e7eb; background: #fafbfc; padding: 4px 7px;
+    display: flex; gap: 4px; justify-content: space-between; align-items: center;
+  }
+  .notebook-btn {
+    background: transparent; color: #d97706; border: 1px solid #fde68a;
+    padding: 2px 7px; border-radius: 4px; font-size: 10px; cursor: pointer;
+    font-weight: 500; font-family: inherit;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .notebook-btn:hover { background: #fef3c7; }
+  .notebook-btn .badge {
+    background: #f59e0b; color: white; border-radius: 8px;
+    padding: 0 5px; font-size: 9px; font-weight: 700;
+  }
+  .add-notebook-mini {
+    background: transparent; color: #6b7280;
+    border: 1px dashed #cbd5e1; padding: 2px 7px;
+    border-radius: 4px; font-size: 10px; cursor: pointer; font-family: inherit;
+  }
+  .add-notebook-mini:hover { background: #f1f5f9; }
+  .task-count { font-size: 10px; color: #6b7280; }
+  .empty-tasks { color: #9ca3af; font-size: 10.5px; font-style: italic; padding: 4px 0; }
+
+  /* Notebook page */
+  #notebook-page {
+    position: fixed; inset: 0; background: #f5f3ee;
+    z-index: 500; display: none; flex-direction: column; overflow-y: auto;
+  }
+  #notebook-page.open { display: flex; }
+  .nb-header {
+    background: linear-gradient(135deg, #92400e 0%, #d97706 100%);
+    color: white; padding: 14px 26px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+  .nb-header h1 { font-size: 19px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  .nb-header .nb-subtitle { font-size: 12px; opacity: 0.9; margin-top: 3px; }
+  .nb-header-actions { display: flex; gap: 8px; }
+  .nb-content { max-width: 800px; margin: 0 auto; padding: 22px 26px 40px; width: 100%; }
+  .nb-add-area {
+    background: white; border: 1px solid #fde68a; border-radius: 9px;
+    padding: 14px; margin-bottom: 22px; box-shadow: 0 2px 5px rgba(146,64,14,0.06);
+  }
+  .nb-add-area label {
+    font-size: 11px; color: #92400e; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    display: block; margin-bottom: 6px;
+  }
+  .nb-add-area textarea {
+    width: 100%; min-height: 80px; padding: 10px 12px;
+    border: 1px solid #e5e7eb; border-radius: 6px;
+    font-size: 13px; font-family: inherit; resize: vertical; line-height: 1.5;
+  }
+  .nb-add-area .controls { display: flex; justify-content: flex-end; margin-top: 8px; gap: 6px; }
+  .nb-entry {
+    background: white; border: 1px solid #fde68a; border-left: 4px solid #f59e0b;
+    border-radius: 7px; padding: 12px 16px; margin-bottom: 12px;
+    font-size: 13px; line-height: 1.6; box-shadow: 0 1px 3px rgba(146,64,14,0.05);
+  }
+  .nb-entry-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 7px; padding-bottom: 6px; border-bottom: 1px dashed #fde68a;
+  }
+  .nb-entry-date { font-size: 11px; color: #92400e; font-weight: 700; }
+  .nb-entry-content { white-space: pre-wrap; color: #1f2937; }
+  .nb-empty { text-align: center; color: #9ca3af; padding: 40px; font-style: italic; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55);
+    display: none; align-items: center; justify-content: center; z-index: 1000; padding: 18px;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: white; border-radius: 10px; padding: 20px;
+    max-width: 540px; width: 100%; max-height: 85vh; overflow-y: auto;
+    box-shadow: 0 18px 45px rgba(0,0,0,0.3);
+  }
+  .modal h2 { font-size: 16px; margin-bottom: 12px; color: #1e3a5f; }
+  .modal label {
+    display: block; font-size: 11px; font-weight: 600; color: #4b5563;
+    margin: 10px 0 4px; text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .modal input, .modal select, .modal textarea {
+    width: 100%; padding: 8px 11px;
+    border: 1px solid #d1d5db; border-radius: 5px;
+    font-size: 13px; font-family: inherit;
+  }
+  .modal textarea { min-height: 130px; resize: vertical; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+  .ai-output {
+    background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 7px;
+    padding: 12px; margin-top: 10px; white-space: pre-wrap;
+    font-size: 12px; line-height: 1.55; color: #1f2937;
+    max-height: 380px; overflow-y: auto; font-family: 'Courier New', monospace;
+  }
+
+  /* Login */
+  #login-screen {
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, #1e3a5f 0%, #0f4c75 100%);
+    display: flex; align-items: center; justify-content: center; z-index: 2000;
+  }
+  .login-card {
+    background: white; padding: 36px; border-radius: 12px;
+    max-width: 420px; width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center;
+  }
+  .login-card .brand-logo {
+    width: 60px; height: 60px; background: #f59e0b; border-radius: 12px;
+    margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 24px; color: #1e3a5f;
+  }
+  .login-card h1 { color: #1e3a5f; font-size: 20px; margin-bottom: 6px; }
+  .login-card p { color: #6b7280; font-size: 12px; margin-bottom: 18px; }
+  .cloud-banner {
+    background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0;
+    padding: 8px 11px; border-radius: 5px;
+    font-size: 11px; margin-bottom: 14px; line-height: 1.5;
+  }
+  .cloud-banner.warn { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+  .cloud-banner strong { font-weight: 700; }
+  .local-input-row { margin-top: 14px; }
+  .local-input-row input {
+    width: 100%; padding: 10px 12px;
+    border: 1px solid #d1d5db; border-radius: 6px;
+    font-size: 13px; margin-bottom: 10px; font-family: inherit;
+  }
+  .local-input-row button {
+    width: 100%; padding: 10px;
+    background: #1e3a5f; color: white;
+    border: none; border-radius: 6px;
+    font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .login-note { margin-top: 14px; font-size: 10px; color: #9ca3af; line-height: 1.5; }
+  .login-msg { font-size: 12px; padding: 8px 10px; border-radius: 5px; margin-top: 10px; display: none; }
+  .login-msg.success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; display: block; }
+  .login-msg.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; display: block; }
+
+  @media (max-width: 600px) {
+    header { padding: 8px 14px; }
+    main { padding: 10px; }
+    #projects-container { grid-template-columns: 1fr; }
+    .week-stats { width: 100%; margin-left: 0; flex-wrap: wrap; }
+  }
+  @media print {
+    header .week-nav button, .toolbar, .tile-menu-btn, .add-task-row, .quick-options, .task-del { display: none !important; }
+    body { background: white; font-size: 10px; }
+    .tile { break-inside: avoid; box-shadow: none; border: 1px solid #1e3a5f; }
+    #projects-container { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="brand-logo">S</div>
+    <h1>Structcon Master Plan</h1>
+    <p>Sign in with Microsoft to sync your data via OneDrive across all devices</p>
+
+    <div id="cloud-banner" class="cloud-banner warn">
+      <strong>⚠ OneDrive sync not configured.</strong><br>
+      Edit <code>msalConfig</code> in this file to enable. Until then, you can use local-only mode below.
+    </div>
+
+    <button id="ms-login-btn" class="btn-microsoft" onclick="loginWithMicrosoft()" style="display:none;">
+      <svg class="ms-logo" viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="10" height="10" fill="#f25022"/>
+        <rect x="12" y="1" width="10" height="10" fill="#7fba00"/>
+        <rect x="1" y="12" width="10" height="10" fill="#00a4ef"/>
+        <rect x="12" y="12" width="10" height="10" fill="#ffb900"/>
+      </svg>
+      Sign in with Microsoft
+    </button>
+
+    <div class="local-input-row" id="local-fallback">
+      <input type="email" id="login-email" placeholder="your.email@structcon.in (local-only)" />
+      <button onclick="loginLocal()">Continue in local-only mode</button>
+    </div>
+
+    <div id="login-msg" class="login-msg"></div>
+
+    <div class="login-note" id="login-note">
+      Data stays only on this device in local-only mode.<br>
+      Configure Microsoft sign-in to sync via your OneDrive.
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-top">
+    <div class="brand">
+      <div class="brand-logo">S</div>
+      <div>
+        <h1>Structcon Master Plan</h1>
+        <div class="subtitle">Weekly planning · OneDrive synced</div>
+      </div>
+    </div>
+    <div class="user-info">
+      <div id="sync-status" class="sync-status local" onclick="manualSync()" title="Click to sync now">
+        <span class="sync-dot"></span>
+        <span id="sync-text">Local only</span>
+      </div>
+      <div>
+        <div><strong>Avikshit Yeri</strong></div>
+        <div class="email" id="user-email"></div>
+      </div>
+      <button class="btn btn-xs" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.25);" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+  <div class="week-nav">
+    <button onclick="changeWeek(-1)">&larr; Prev</button>
+    <button onclick="goToCurrentWeek()">This week</button>
+    <button onclick="changeWeek(1)">Next &rarr;</button>
+    <div class="week-display" id="week-display">Loading...</div>
+    <div class="week-stats" id="week-stats"></div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <button class="btn btn-primary" onclick="openAddProjectModal()">+ Add Project / Category</button>
+  <button class="btn btn-ai" onclick="aiSummarizeWeek()">AI: Summarize</button>
+  <button class="btn btn-ai" onclick="aiBrainDumpModal()">AI: Brain-dump</button>
+  <button class="btn btn-ai" onclick="aiAutoGenerateWeek()">AI: Carry over last week</button>
+  <button class="btn btn-secondary" onclick="window.print()">Print / PDF</button>
+  <button class="btn btn-secondary" onclick="exportData()">Export</button>
+  <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">Import</button>
+  <input type="file" id="import-file" style="display:none" accept=".json" onchange="importData(event)" />
+</div>
+
+<main>
+  <div id="projects-container"></div>
+</main>
+
+<!-- Notebook page -->
+<div id="notebook-page">
+  <div class="nb-header">
+    <div>
+      <h1>📓 <span id="nb-project-name"></span></h1>
+      <div class="nb-subtitle" id="nb-subtitle"></div>
+    </div>
+    <div class="nb-header-actions">
+      <button class="btn btn-secondary" onclick="openEmailFromNotebook()">Email notes</button>
+      <button class="btn btn-secondary" onclick="closeNotebookPage()">← Back to dashboard</button>
+    </div>
+  </div>
+  <div class="nb-content">
+    <div class="nb-add-area">
+      <label>New note / meeting jot</label>
+      <textarea id="nb-new-content" placeholder="Type notes, jot meeting points, action items, decisions..."></textarea>
+      <div class="controls">
+        <button class="btn btn-primary" onclick="addNoteFromPage()">+ Add note</button>
+      </div>
+    </div>
+    <div id="nb-entries"></div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="add-project-modal">
+  <div class="modal">
+    <h2>Add Project or Category</h2>
+    <label>Name</label>
+    <input type="text" id="new-project-name" placeholder="e.g., Mumbai Coastal Road Phase 2" />
+    <label>Type</label>
+    <select id="new-project-type">
+      <option value="project">Project (engineering work)</option>
+      <option value="category">Category (Billing, Payments, HR, etc.)</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('add-project-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewProject()">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="ai-summary-modal">
+  <div class="modal">
+    <h2>Weekly Summary</h2>
+    <div class="ai-output" id="ai-summary-output"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="copyAiOutput('ai-summary-output')">Copy</button>
+      <button class="btn btn-primary" onclick="closeModal('ai-summary-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="brain-dump-modal">
+  <div class="modal">
+    <h2>Brain-dump &rarr; Tasks</h2>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:8px;">
+      Paste free text. Words like "urgent", "by Friday", "tomorrow" auto-set priority & due date. Project name mentions auto-assign the tile.
+    </p>
+    <label>Your text</label>
+    <textarea id="brain-dump-input" placeholder="Example:
+Finalize foundation design for Pune Metro by Wednesday. Urgent.
+Call Datta about May salaries.
+Follow up MMRDA for pending invoice 1245."></textarea>
+    <label>Force-assign all parsed tasks to (optional)</label>
+    <select id="brain-dump-project">
+      <option value="">-- Auto-detect by project name --</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('brain-dump-modal')">Cancel</button>
+      <button class="btn btn-ai" onclick="processBrainDump()">Parse into tasks</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="email-notes-modal">
+  <div class="modal">
+    <h2>Email Project Notes</h2>
+    <label>Recipients (comma-separated)</label>
+    <input type="text" id="email-recipients" placeholder="datta@structcon.in, umang@structcon.in" />
+    <label>Subject</label>
+    <input type="text" id="email-subject" />
+    <label>Body (editable)</label>
+    <textarea id="email-body" style="min-height:230px;"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('email-notes-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="sendEmailNotes()">Open in email client</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===============================================================
+// =========== MICROSOFT / ONEDRIVE CONFIGURATION ================
+// ===============================================================
+// REPLACE the values below with your own Azure AD app registration.
+// Get these from: https://portal.azure.com → Azure Active Directory
+//   → App registrations → Your app → Overview
+//
+// Steps to obtain:
+//   1. Register a Single-Page Application (SPA) in Azure portal
+//   2. Add Microsoft Graph delegated permissions:
+//      Files.ReadWrite.AppFolder, User.Read
+//   3. Set redirect URI to your hosting URL (e.g., GitHub Pages)
+//   4. Copy Application (client) ID and paste below
+//
+// Until you replace these, the app runs in LOCAL-ONLY mode.
+// ===============================================================
+const msalConfig = {
+  auth: {
+    clientId: "f2d04ce0-e8f6-47a0-8ad3-b6c573dba414",
+    authority: "https://login.microsoftonline.com/common",
+    redirectUri: window.location.origin + window.location.pathname
+  },
+  cache: {
+    cacheLocation: "localStorage",
+    storeAuthStateInCookie: false
+  }
+};
+// ===============================================================
+
+const CLOUD_ENABLED = msalConfig.auth.clientId !== "YOUR_AZURE_CLIENT_ID_HERE";
+const STORAGE_KEY = 'structcon-masterplan-v1';
+const USER_KEY = 'structcon-user';
+const ETAG_KEY = 'structcon-etag';
+const SCOPES = ["Files.ReadWrite.AppFolder", "User.Read"];
+const ONEDRIVE_FILE = "structcon-masterplan.json";
+const POLL_INTERVAL_MS = 30000;
+
+let currentWeekStart = null;
+let data = { weeks: {} };
+let activeNotebookProjectId = null;
+let currentAccount = null;
+let msalInstance = null;
+let saveTimer = null;
+let pollTimer = null;
+let lastKnownEtag = null;
+let lastSavedHash = '';
+
+// ---------- Init MSAL if configured ----------
+if (CLOUD_ENABLED) {
+  try {
+    msalInstance = new msal.PublicClientApplication(msalConfig);
+    document.getElementById('cloud-banner').className = 'cloud-banner';
+    document.getElementById('cloud-banner').innerHTML = '<strong>☁ OneDrive sync ready.</strong><br>Sign in with your Microsoft account to sync data across all your devices.';
+    document.getElementById('ms-login-btn').style.display = 'inline-flex';
+    document.getElementById('local-fallback').style.display = 'none';
+    document.getElementById('login-note').innerHTML = 'Your data is stored in a private folder in your OneDrive that only this app can access.';
+  } catch (e) {
+    console.error('MSAL init error:', e);
+  }
+} else {
+  document.getElementById('ms-login-btn').style.display = 'none';
+}
+
+// ---------- Sync status ----------
+function setSyncStatus(state, text) {
+  const el = document.getElementById('sync-status');
+  el.className = `sync-status ${state}`;
+  document.getElementById('sync-text').textContent = text;
+}
+
+// ---------- Helpers ----------
+function mondayOf(d) {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  date.setDate(diff); date.setHours(0, 0, 0, 0);
+  return date;
+}
+function fmtWeekKey(d) { return mondayOf(d).toISOString().split('T')[0]; }
+function fmtWeekDisplay(d) {
+  const start = mondayOf(d);
+  const end = new Date(start); end.setDate(end.getDate() + 6);
+  const opts = { month: 'short', day: 'numeric' };
+  const yr = start.getFullYear() === end.getFullYear() ? end.getFullYear() : `${start.getFullYear()}/${end.getFullYear()}`;
+  return `Week of ${start.toLocaleDateString('en-IN', opts)} – ${end.toLocaleDateString('en-IN', opts)}, ${yr}`;
+}
+function fmtDate(s) {
+  if (!s) return '';
+  return new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+function todayISO() { return new Date().toISOString().split('T')[0]; }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function hash(obj) { return JSON.stringify(obj); }
+
+// ---------- Auth ----------
+async function loginWithMicrosoft() {
+  if (!msalInstance) return;
+  const msg = document.getElementById('login-msg');
+  msg.className = 'login-msg success'; msg.textContent = 'Redirecting to Microsoft...';
+  try {
+    await msalInstance.loginRedirect({ scopes: SCOPES });
+  } catch (err) {
+    msg.className = 'login-msg error';
+    msg.textContent = 'Sign-in failed: ' + err.message;
+  }
+}
+
+function loginLocal() {
+  const email = document.getElementById('login-email').value.trim();
+  const msg = document.getElementById('login-msg');
+  if (!email || !email.includes('@')) {
+    msg.className = 'login-msg error'; msg.textContent = 'Please enter a valid email.';
+    return;
+  }
+  localStorage.setItem(USER_KEY, email);
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('user-email').textContent = email + ' (local only)';
+  init();
+}
+
+async function logout() {
+  if (!confirm('Sign out?')) return;
+  stopPolling();
+  if (CLOUD_ENABLED && msalInstance && currentAccount) {
+    await msalInstance.logoutRedirect({ account: currentAccount });
+  } else {
+    localStorage.removeItem(USER_KEY);
+    location.reload();
+  }
+}
+
+async function getAccessToken() {
+  if (!msalInstance || !currentAccount) throw new Error('Not signed in');
+  try {
+    const response = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: currentAccount });
+    return response.accessToken;
+  } catch (err) {
+    // Silent failed, try interactive (popup)
+    try {
+      const response = await msalInstance.acquireTokenPopup({ scopes: SCOPES });
+      return response.accessToken;
+    } catch (e2) {
+      throw e2;
+    }
+  }
+}
+
+// ---------- OneDrive ops ----------
+const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
+const FILE_PATH_URL = `${GRAPH_BASE}/me/drive/special/approot:/${ONEDRIVE_FILE}`;
+
+async function loadFromOneDrive() {
+  const token = await getAccessToken();
+  // Read file content
+  const resp = await fetch(`${FILE_PATH_URL}:/content`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (resp.status === 404) {
+    return { data: { weeks: {} }, etag: null, isNew: true };
+  }
+  if (!resp.ok) {
+    throw new Error(`OneDrive load failed: HTTP ${resp.status}`);
+  }
+  const text = await resp.text();
+  const parsed = text ? JSON.parse(text) : { weeks: {} };
+  const etag = resp.headers.get('etag') || null;
+  return { data: parsed, etag, isNew: false };
+}
+
+async function saveToOneDrive(payload) {
+  const token = await getAccessToken();
+  const resp = await fetch(`${FILE_PATH_URL}:/content`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload, null, 2)
+  });
+  if (!resp.ok) {
+    throw new Error(`OneDrive save failed: HTTP ${resp.status}`);
+  }
+  const meta = await resp.json();
+  return { etag: meta.eTag || meta['@odata.etag'] || null, modified: meta.lastModifiedDateTime };
+}
+
+async function getFileMetadata() {
+  const token = await getAccessToken();
+  const resp = await fetch(FILE_PATH_URL, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (resp.status === 404) return null;
+  if (!resp.ok) throw new Error(`Metadata fetch failed: HTTP ${resp.status}`);
+  return await resp.json();
+}
+
+// ---------- Data load/save ----------
+async function loadData() {
+  if (CLOUD_ENABLED && currentAccount) {
+    setSyncStatus('syncing', 'Loading from OneDrive...');
+    try {
+      const { data: loaded, etag, isNew } = await loadFromOneDrive();
+      data = loaded;
+      lastKnownEtag = etag;
+      lastSavedHash = hash(data);
+      if (isNew) {
+        // First time - save the initial blank data so file exists
+        await persistToCloud();
+      }
+      // Keep a local backup
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      setSyncStatus('synced', 'Synced with OneDrive');
+    } catch (err) {
+      console.error('Load error:', err);
+      setSyncStatus('offline', 'Offline – using local copy');
+      loadLocalData();
+    }
+  } else {
+    loadLocalData();
+  }
+  if (!data.weeks) data.weeks = {};
+}
+
+function loadLocalData() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) { try { data = JSON.parse(raw); } catch (e) { data = { weeks: {} }; } }
+  if (!data.weeks) data.weeks = {};
+}
+
+async function persistToCloud() {
+  if (!CLOUD_ENABLED || !currentAccount) return;
+  try {
+    setSyncStatus('syncing', 'Saving to OneDrive...');
+    const result = await saveToOneDrive(data);
+    lastKnownEtag = result.etag;
+    lastSavedHash = hash(data);
+    setSyncStatus('synced', 'Synced with OneDrive');
+  } catch (err) {
+    console.error('Save error:', err);
+    setSyncStatus('offline', 'Offline – saved locally');
+  }
+}
+
+function saveData() {
+  // Always save local backup immediately
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  if (CLOUD_ENABLED && currentAccount) {
+    if (saveTimer) clearTimeout(saveTimer);
+    setSyncStatus('syncing', 'Saving...');
+    saveTimer = setTimeout(persistToCloud, 1200);
+  }
+}
+
+async function manualSync() {
+  if (!CLOUD_ENABLED || !currentAccount) return;
+  setSyncStatus('syncing', 'Syncing...');
+  try {
+    const { data: remote, etag } = await loadFromOneDrive();
+    const remoteHash = hash(remote);
+    if (remoteHash !== hash(data)) {
+      data = remote;
+      lastKnownEtag = etag;
+      lastSavedHash = remoteHash;
+      render();
+      setSyncStatus('synced', 'Updated from OneDrive');
+      setTimeout(() => setSyncStatus('synced', 'Synced with OneDrive'), 2500);
+    } else {
+      setSyncStatus('synced', 'Already up to date');
+      setTimeout(() => setSyncStatus('synced', 'Synced with OneDrive'), 2000);
+    }
+  } catch (err) {
+    setSyncStatus('offline', 'Sync failed');
+  }
+}
+
+// ---------- Polling for changes from other devices ----------
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    if (!CLOUD_ENABLED || !currentAccount) return;
+    if (saveTimer) return;  // skip if a save is pending
+    try {
+      const meta = await getFileMetadata();
+      if (!meta) return;
+      const remoteEtag = meta.eTag || meta['@odata.etag'];
+      if (remoteEtag && remoteEtag !== lastKnownEtag) {
+        // Remote changed by another device
+        const { data: remote, etag } = await loadFromOneDrive();
+        const remoteHash = hash(remote);
+        const localHash = hash(data);
+        if (remoteHash !== localHash) {
+          data = remote;
+          lastKnownEtag = etag;
+          lastSavedHash = remoteHash;
+          render();
+          setSyncStatus('synced', 'Updated from another device');
+          setTimeout(() => setSyncStatus('synced', 'Synced with OneDrive'), 2500);
+        } else {
+          lastKnownEtag = etag;
+        }
+      }
+    } catch (err) {
+      // silent
+    }
+  }, POLL_INTERVAL_MS);
+}
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+// ---------- Week ----------
+function getCurrentWeek() {
+  const key = fmtWeekKey(currentWeekStart);
+  if (!data.weeks[key]) data.weeks[key] = { projects: getDefaultProjects() };
+  return data.weeks[key];
+}
+function getDefaultProjects() {
+  return [
+    { id: uid(), name: 'Billing', type: 'category', tasks: [], notebook: null },
+    { id: uid(), name: 'Follow-up Payments', type: 'category', tasks: [], notebook: null },
+    { id: uid(), name: 'Employee Appraisal', type: 'category', tasks: [], notebook: null },
+    { id: uid(), name: 'ISO Documentation', type: 'category', tasks: [], notebook: null },
+    { id: uid(), name: 'HR & Admin', type: 'category', tasks: [], notebook: null },
+    { id: uid(), name: 'BD / Tendering', type: 'category', tasks: [], notebook: null },
+  ];
+}
+function changeWeek(delta) {
+  const d = new Date(currentWeekStart); d.setDate(d.getDate() + (delta * 7));
+  currentWeekStart = mondayOf(d); render();
+}
+function goToCurrentWeek() { currentWeekStart = mondayOf(new Date()); render(); }
+
+// ---------- Render ----------
+function render() {
+  document.getElementById('week-display').textContent = fmtWeekDisplay(currentWeekStart);
+  const week = getCurrentWeek();
+  renderStats(week);
+  renderTiles(week);
+  refreshBrainDumpProjectSelect(week);
+}
+function renderStats(week) {
+  let total = 0, done = 0, high = 0, overdue = 0;
+  const today = todayISO();
+  week.projects.forEach(p => {
+    p.tasks.forEach(t => {
+      total++;
+      if (t.done) done++;
+      if (t.priority === 'high' && !t.done) high++;
+      if (t.dueDate && t.dueDate < today && !t.done) overdue++;
+    });
+  });
+  document.getElementById('week-stats').innerHTML = `
+    <div class="stat-badge"><strong>${done}</strong>/${total} done</div>
+    <div class="stat-badge"><strong>${high}</strong> high pri</div>
+    <div class="stat-badge ${overdue > 0 ? 'alert' : ''}"><strong>${overdue}</strong> overdue</div>
+  `;
+}
+function renderTiles(week) {
+  const container = document.getElementById('projects-container');
+  if (week.projects.length === 0) {
+    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">No projects yet. Click "+ Add Project / Category" to begin.</div>';
+    return;
+  }
+  container.innerHTML = week.projects.map(p => renderTile(p)).join('');
+}
+function renderTile(p) {
+  const taskCount = p.tasks.length;
+  const doneCount = p.tasks.filter(t => t.done).length;
+  const notebookCount = p.notebook ? (p.notebook.entries || []).length : 0;
+  const tasksHTML = taskCount === 0
+    ? '<div class="empty-tasks">No tasks</div>'
+    : p.tasks.map(t => renderTaskLine(p.id, t)).join('');
+  const notebookCtrl = p.notebook
+    ? `<button class="notebook-btn" onclick="openNotebookPage('${p.id}')">📓 Notebook ${notebookCount > 0 ? `<span class="badge">${notebookCount}</span>` : ''}</button>`
+    : `<button class="add-notebook-mini" onclick="toggleNotebook('${p.id}')">+ notebook</button>`;
+  return `
+    <div class="tile ${p.type}" data-id="${p.id}">
+      <div class="tile-header">
+        <div class="tile-title" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</div>
+        <div class="tile-menu">
+          <button class="tile-menu-btn" onclick="toggleTileMenu(event,'${p.id}')">⋮</button>
+          <div class="tile-menu-dropdown" id="menu-${p.id}">
+            <button onclick="renameProject('${p.id}')">Rename</button>
+            <button onclick="changeProjectType('${p.id}')">Change type</button>
+            <button class="danger" onclick="deleteProject('${p.id}')">Delete</button>
+          </div>
+        </div>
+      </div>
+      <div class="tile-body">
+        ${tasksHTML}
+        <div class="add-task-row">
+          <input type="text" placeholder="+ task" id="newtask-${p.id}"
+            onkeydown="if(event.key==='Enter')addTask('${p.id}')"
+            onfocus="document.getElementById('opts-${p.id}').classList.add('show')" />
+          <button class="add-btn" onclick="addTask('${p.id}')">+</button>
+        </div>
+        <div class="quick-options" id="opts-${p.id}">
+          <select id="newprio-${p.id}">
+            <option value="medium">Med</option>
+            <option value="high">High</option>
+            <option value="low">Low</option>
+          </select>
+          <input type="date" id="newdate-${p.id}" />
+        </div>
+      </div>
+      <div class="tile-footer">
+        <span class="task-count">${doneCount}/${taskCount}</span>
+        ${notebookCtrl}
+      </div>
+    </div>
+  `;
+}
+function renderTaskLine(projectId, t) {
+  const today = todayISO();
+  let dueClass = '';
+  if (t.dueDate && !t.done) {
+    if (t.dueDate < today) dueClass = 'overdue';
+    else if (t.dueDate === today) dueClass = 'today';
+  }
+  return `
+    <div class="task-line priority-${t.priority} ${t.done ? 'done' : ''}">
+      <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask('${projectId}','${t.id}')" />
+      <div class="task-text">${escapeHtml(t.title)}</div>
+      ${t.dueDate ? `<span class="due-mini ${dueClass}">${fmtDate(t.dueDate)}</span>` : ''}
+      <button class="task-del" onclick="deleteTask('${projectId}','${t.id}')" title="Delete">×</button>
+    </div>
+  `;
+}
+
+// Tile menu
+function toggleTileMenu(e, projectId) {
+  e.stopPropagation();
+  document.querySelectorAll('.tile-menu-dropdown').forEach(d => {
+    if (d.id !== `menu-${projectId}`) d.classList.remove('open');
+  });
+  document.getElementById(`menu-${projectId}`).classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  document.querySelectorAll('.tile-menu-dropdown').forEach(d => d.classList.remove('open'));
+});
+
+// Project actions
+function openAddProjectModal() {
+  document.getElementById('new-project-name').value = '';
+  document.getElementById('new-project-type').value = 'project';
+  document.getElementById('add-project-modal').classList.add('active');
+  setTimeout(() => document.getElementById('new-project-name').focus(), 50);
+}
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+function saveNewProject() {
+  const name = document.getElementById('new-project-name').value.trim();
+  const type = document.getElementById('new-project-type').value;
+  if (!name) { alert('Please enter a name'); return; }
+  const week = getCurrentWeek();
+  week.projects.push({ id: uid(), name, type, tasks: [], notebook: null });
+  saveData(); closeModal('add-project-modal'); render();
+}
+function deleteProject(id) {
+  if (!confirm('Delete this tile and all its tasks/notes for this week?')) return;
+  const week = getCurrentWeek();
+  week.projects = week.projects.filter(p => p.id !== id);
+  saveData(); render();
+}
+function renameProject(id) {
+  const week = getCurrentWeek();
+  const p = week.projects.find(x => x.id === id);
+  const newName = prompt('Rename:', p.name);
+  if (newName && newName.trim()) { p.name = newName.trim(); saveData(); render(); }
+}
+function changeProjectType(id) {
+  const week = getCurrentWeek();
+  const p = week.projects.find(x => x.id === id);
+  p.type = p.type === 'project' ? 'category' : 'project';
+  saveData(); render();
+}
+
+// Task actions
+function addTask(projectId) {
+  const titleEl = document.getElementById(`newtask-${projectId}`);
+  const prioEl = document.getElementById(`newprio-${projectId}`);
+  const dateEl = document.getElementById(`newdate-${projectId}`);
+  const title = titleEl.value.trim();
+  if (!title) return;
+  const week = getCurrentWeek();
+  const p = week.projects.find(x => x.id === projectId);
+  p.tasks.push({
+    id: uid(), title,
+    priority: prioEl ? prioEl.value : 'medium',
+    dueDate: dateEl ? (dateEl.value || null) : null,
+    done: false, createdAt: new Date().toISOString()
+  });
+  saveData(); render();
+}
+function toggleTask(projectId, taskId) {
+  const week = getCurrentWeek();
+  const p = week.projects.find(x => x.id === projectId);
+  const t = p.tasks.find(x => x.id === taskId);
+  t.done = !t.done; saveData(); render();
+}
+function deleteTask(projectId, taskId) {
+  const week = getCurrentWeek();
+  const p = week.projects.find(x => x.id === projectId);
+  p.tasks = p.tasks.filter(t => t.id !== taskId);
+  saveData(); render();
+}
+
+// Notebook
+function toggleNotebook(projectId) {
+  const week = getCurrentWeek();
+  const p = week.projects.find(x => x.id === projectId);
+  p.notebook = { enabled: true, entries: [] };
+  saveData(); openNotebookPage(projectId);
+}
+function openNotebookPage(projectId) {
+  const week = getCurrentWeek();
+  const p = week.projects.find(x => x.id === projectId);
+  if (!p) return;
+  if (!p.notebook) p.notebook = { enabled: true, entries: [] };
+  activeNotebookProjectId = projectId;
+  document.getElementById('nb-project-name').textContent = p.name;
+  document.getElementById('nb-subtitle').textContent = fmtWeekDisplay(currentWeekStart);
+  renderNotebookEntries();
+  document.getElementById('notebook-page').classList.add('open');
+  document.getElementById('nb-new-content').focus();
+}
+function closeNotebookPage() {
+  document.getElementById('notebook-page').classList.remove('open');
+  activeNotebookProjectId = null;
+  render();
+}
+function renderNotebookEntries() {
+  const week = getCurrentWeek();
+  const p = week.projects.find(x => x.id === activeNotebookProjectId);
+  if (!p || !p.notebook) return;
+  const entries = (p.notebook.entries || []).slice().reverse();
+  const container = document.getElementById('nb-entries');
+  if (entries.length === 0) {
+    container.innerHTML = '<div class="nb-empty">No notes yet. Add your first note above.</div>';
+    return;
+  }
+  container.innerHTML = entries.map(e => `
+    <div class="nb-entry">
+      <div class="nb-entry-header">
+        <div class="nb-entry-date">${new Date(e.date).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+        <button class="btn btn-xs btn-danger" onclick="deleteNoteFromPage('${e.id}')">Delete</button>
+      </div>
+      <div class="nb-entry-content">${escapeHtml(e.content)}</div>
+    </div>
+  `).join('');
+}
+function addNoteFromPage() {
+  const content = document.getElementById('nb-new-content').value.trim();
+  if (!content) return;
+  const week = getCurrentWeek();
+  const p = week.projects.find(x => x.id === activeNotebookProjectId);
+  if (!p.notebook) p.notebook = { enabled: true, entries: [] };
+  p.notebook.entries.push({ id: uid(), date: new Date().toISOString(), content });
+  saveData();
+  document.getElementById('nb-new-content').value = '';
+  renderNotebookEntries();
+}
+function deleteNoteFromPage(noteId) {
+  if (!confirm('Delete this note?')) return;
+  const week = getCurrentWeek();
+  const p = week.projects.find(x => x.id === activeNotebookProjectId);
+  p.notebook.entries = p.notebook.entries.filter(e => e.id !== noteId);
+  saveData(); renderNotebookEntries();
+}
+function openEmailFromNotebook() {
+  if (!activeNotebookProjectId) return;
+  openEmailNotesModal(activeNotebookProjectId);
+}
+
+// AI features
+function aiSummarizeWeek() {
+  const week = getCurrentWeek();
+  let out = `WEEKLY MASTER PLAN — ${fmtWeekDisplay(currentWeekStart)}\n`;
+  const userEmail = currentAccount ? currentAccount.username : (localStorage.getItem(USER_KEY) || '');
+  out += `Director: ${userEmail}\nStructcon Designs Pvt. Ltd.\n${'='.repeat(60)}\n\n`;
+  const today = todayISO();
+  let totalTasks = 0, doneTasks = 0, highCount = 0, overdueCount = 0;
+  week.projects.forEach(p => {
+    if (p.tasks.length === 0 && (!p.notebook || p.notebook.entries.length === 0)) return;
+    out += `▸ ${p.name.toUpperCase()} (${p.type})\n`;
+    if (p.tasks.length > 0) {
+      const high = p.tasks.filter(t => t.priority === 'high' && !t.done);
+      const med = p.tasks.filter(t => t.priority === 'medium' && !t.done);
+      const low = p.tasks.filter(t => t.priority === 'low' && !t.done);
+      const done = p.tasks.filter(t => t.done);
+      if (high.length) { out += `  HIGH PRIORITY:\n`; high.forEach(t => out += `    • ${t.title}${t.dueDate ? ` [due ${fmtDate(t.dueDate)}]` : ''}${t.dueDate && t.dueDate < today ? ' ⚠ OVERDUE' : ''}\n`); }
+      if (med.length) { out += `  Medium:\n`; med.forEach(t => out += `    • ${t.title}${t.dueDate ? ` [due ${fmtDate(t.dueDate)}]` : ''}\n`); }
+      if (low.length) { out += `  Low:\n`; low.forEach(t => out += `    • ${t.title}${t.dueDate ? ` [due ${fmtDate(t.dueDate)}]` : ''}\n`); }
+      if (done.length) out += `  ✓ Completed: ${done.length}\n`;
+    }
+    if (p.notebook && p.notebook.entries.length > 0) out += `  📓 Notebook: ${p.notebook.entries.length} entr${p.notebook.entries.length === 1 ? 'y' : 'ies'}\n`;
+    out += '\n';
+    totalTasks += p.tasks.length;
+    doneTasks += p.tasks.filter(t => t.done).length;
+    highCount += p.tasks.filter(t => t.priority === 'high' && !t.done).length;
+    overdueCount += p.tasks.filter(t => t.dueDate && t.dueDate < today && !t.done).length;
+  });
+  out += `${'='.repeat(60)}\nSUMMARY: ${doneTasks}/${totalTasks} done | ${highCount} high-priority pending | ${overdueCount} overdue\n`;
+  document.getElementById('ai-summary-output').textContent = out;
+  document.getElementById('ai-summary-modal').classList.add('active');
+}
+function copyAiOutput(elId) {
+  navigator.clipboard.writeText(document.getElementById(elId).textContent).then(() => alert('Copied to clipboard'));
+}
+function aiBrainDumpModal() {
+  document.getElementById('brain-dump-input').value = '';
+  refreshBrainDumpProjectSelect(getCurrentWeek());
+  document.getElementById('brain-dump-modal').classList.add('active');
+}
+function refreshBrainDumpProjectSelect(week) {
+  const sel = document.getElementById('brain-dump-project');
+  if (!sel) return;
+  const opts = ['<option value="">-- Auto-detect by project name --</option>'];
+  week.projects.forEach(p => opts.push(`<option value="${p.id}">${escapeHtml(p.name)}</option>`));
+  sel.innerHTML = opts.join('');
+}
+function processBrainDump() {
+  const text = document.getElementById('brain-dump-input').value.trim();
+  if (!text) return;
+  const forcedId = document.getElementById('brain-dump-project').value;
+  const week = getCurrentWeek();
+  if (week.projects.length === 0) { alert('Add a project first'); return; }
+  const lines = text.split(/\n+/).map(l => l.trim()).filter(l => l.length > 3);
+  let addedCount = 0;
+  const today = new Date();
+  const daysOfWeek = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+  lines.forEach(line => {
+    let priority = 'medium';
+    if (/\b(high priority|urgent|asap|critical|important)\b/i.test(line)) priority = 'high';
+    else if (/\b(low priority|when possible|eventually|nice to have)\b/i.test(line)) priority = 'low';
+    let dueDate = null;
+    const lower = line.toLowerCase();
+    if (/\btoday\b/.test(lower)) dueDate = today.toISOString().split('T')[0];
+    else if (/\btomorrow\b/.test(lower)) {
+      const d = new Date(today); d.setDate(d.getDate() + 1);
+      dueDate = d.toISOString().split('T')[0];
+    } else {
+      for (let i = 0; i < daysOfWeek.length; i++) {
+        if (new RegExp(`\\bby ${daysOfWeek[i]}\\b|\\bon ${daysOfWeek[i]}\\b`, 'i').test(lower)) {
+          const target = new Date(today);
+          const diff = (i - target.getDay() + 7) % 7 || 7;
+          target.setDate(target.getDate() + diff);
+          dueDate = target.toISOString().split('T')[0];
+          break;
+        }
+      }
+    }
+    let targetProject = null;
+    if (forcedId) {
+      targetProject = week.projects.find(p => p.id === forcedId);
+    } else {
+      for (const p of week.projects) {
+        const projKey = p.name.toLowerCase().split(/[\s\/]+/).filter(w => w.length > 3);
+        for (const kw of projKey) { if (lower.includes(kw)) { targetProject = p; break; } }
+        if (targetProject) break;
+      }
+      if (!targetProject) targetProject = week.projects[0];
+    }
+    let title = line.replace(/^[-*•▸]\s*/, '').replace(/\.$/, '');
+    targetProject.tasks.push({
+      id: uid(), title, priority, dueDate, done: false,
+      createdAt: new Date().toISOString()
+    });
+    addedCount++;
+  });
+  saveData(); closeModal('brain-dump-modal'); render();
+  alert(`Added ${addedCount} task${addedCount === 1 ? '' : 's'}.`);
+}
+function aiAutoGenerateWeek() {
+  const lastWeekDate = new Date(currentWeekStart);
+  lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+  const lastKey = fmtWeekKey(lastWeekDate);
+  const lastWeek = data.weeks[lastKey];
+  if (!lastWeek) { alert('No data found for the previous week.'); return; }
+  const currentWeek = getCurrentWeek();
+  let copiedCount = 0;
+  lastWeek.projects.forEach(lp => {
+    const incomplete = lp.tasks.filter(t => !t.done);
+    if (incomplete.length === 0) return;
+    let cp = currentWeek.projects.find(p => p.name === lp.name);
+    if (!cp) {
+      cp = { id: uid(), name: lp.name, type: lp.type, tasks: [], notebook: null };
+      currentWeek.projects.push(cp);
+    }
+    incomplete.forEach(t => {
+      if (cp.tasks.some(x => x.title === t.title)) return;
+      cp.tasks.push({
+        id: uid(), title: t.title, priority: t.priority, dueDate: t.dueDate,
+        done: false, createdAt: new Date().toISOString(), carriedFrom: lastKey
+      });
+      copiedCount++;
+    });
+  });
+  saveData(); render();
+  alert(`Carried over ${copiedCount} incomplete task${copiedCount === 1 ? '' : 's'} from last week.`);
+}
+
+// Email
+function openEmailNotesModal(projectId) {
+  const week = getCurrentWeek();
+  const p = week.projects.find(x => x.id === projectId);
+  if (!p) return;
+  document.getElementById('email-recipients').value = '';
+  document.getElementById('email-subject').value = `${p.name} — Notes & action items, ${fmtWeekDisplay(currentWeekStart)}`;
+  let body = `Dear Team,\n\nHere are the notes and action items for ${p.name} (${fmtWeekDisplay(currentWeekStart)}):\n\n`;
+  if (p.notebook && p.notebook.entries.length > 0) {
+    body += `NOTES:\n`;
+    p.notebook.entries.forEach(e => {
+      body += `\n--- ${new Date(e.date).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })} ---\n${e.content}\n`;
+    });
+  }
+  const pendingTasks = p.tasks.filter(t => !t.done);
+  if (pendingTasks.length > 0) {
+    body += `\n\nOPEN ACTION ITEMS:\n`;
+    pendingTasks.forEach(t => {
+      body += `  • ${t.title}${t.dueDate ? ` (due ${fmtDate(t.dueDate)})` : ''} [${t.priority}]\n`;
+    });
+  }
+  body += `\nRegards,\nAvikshit Yeri\nDirector, Structcon Designs Pvt. Ltd.`;
+  document.getElementById('email-body').value = body;
+  document.getElementById('email-notes-modal').classList.add('active');
+}
+function sendEmailNotes() {
+  const to = document.getElementById('email-recipients').value.trim();
+  const subject = document.getElementById('email-subject').value.trim();
+  const body = document.getElementById('email-body').value;
+  if (!to) { alert('Please enter at least one recipient.'); return; }
+  window.open(`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+  closeModal('email-notes-modal');
+}
+
+// Import/Export
+function exportData() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `structcon-masterplan-${todayISO()}.json`; a.click();
+  URL.revokeObjectURL(url);
+}
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.weeks) throw new Error('Invalid format');
+      if (confirm('This will REPLACE all current data. Continue?')) {
+        data = imported; saveData(); render();
+        alert('Data imported successfully.');
+      }
+    } catch (err) { alert('Failed to import: ' + err.message); }
+  };
+  reader.readAsText(file);
+}
+
+// Init
+async function init() {
+  await loadData();
+  currentWeekStart = mondayOf(new Date());
+  render();
+  if (CLOUD_ENABLED && currentAccount) startPolling();
+}
+
+// Bootstrap
+async function bootstrap() {
+  if (!CLOUD_ENABLED) {
+    const savedEmail = localStorage.getItem(USER_KEY);
+    if (savedEmail) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('user-email').textContent = savedEmail + ' (local only)';
+      init();
+    }
+    return;
+  }
+
+  try {
+    // Handle redirect response if returning from Microsoft login
+    const response = await msalInstance.handleRedirectPromise();
+    if (response && response.account) {
+      currentAccount = response.account;
+      msalInstance.setActiveAccount(currentAccount);
+    } else {
+      // Check existing accounts
+      const accounts = msalInstance.getAllAccounts();
+      if (accounts.length > 0) {
+        currentAccount = accounts[0];
+        msalInstance.setActiveAccount(currentAccount);
+      }
+    }
+
+    if (currentAccount) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('user-email').textContent = currentAccount.username;
+      await init();
+    }
+  } catch (err) {
+    console.error('Bootstrap error:', err);
+    const msg = document.getElementById('login-msg');
+    msg.className = 'login-msg error';
+    msg.textContent = 'Sign-in error: ' + err.message;
+  }
+}
+
+// Refocus → quick sync check (catches updates from other devices)
+window.addEventListener('focus', () => {
+  if (CLOUD_ENABLED && currentAccount && !saveTimer) {
+    manualSync();
+  }
+});
+
+document.getElementById('login-email').addEventListener('keydown', e => { if (e.key === 'Enter') loginLocal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('notebook-page').classList.contains('open')) closeNotebookPage();
+});
+
+bootstrap();
+</script>
+</body>
+</html>
